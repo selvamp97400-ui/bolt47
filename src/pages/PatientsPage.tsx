@@ -43,6 +43,8 @@ function PatientsPage() {
   const [analyticsPatient, setAnalyticsPatient] = useState<Patient | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [progressReports, setProgressReports] = useState<any[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
 
   useEffect(() => {
     const loadPatients = () => {
@@ -175,35 +177,41 @@ function PatientsPage() {
     setShowPatientModal(true);
   };
 
-  const handleDeletePatient = (patientId: string) => {
-    // Show confirmation dialog
-    if (!window.confirm('Are you sure you want to remove this patient from your list? This will not delete their account, but will remove them from your patient roster.')) {
-      return;
-    }
+  const handleDeletePatient = (patient: Patient) => {
+    setPatientToDelete(patient);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePatient = () => {
+    if (!patientToDelete) return;
 
     try {
-      // Find patient data for the toast message
-      const patientToRemove = patients.find(p => p.id === patientId);
-      const patientName = patientToRemove?.name || 'Patient';
-      
+      const patientId = patientToDelete.id;
+      const patientName = patientToDelete.name;
+
       // Update bookings to mark them as deleted for this therapist-patient relationship
       const allBookings = JSON.parse(localStorage.getItem('mindcare_bookings') || '[]');
       const updatedBookings = allBookings.map((booking: any) => {
         // If this booking is between the current therapist and the patient being removed
-        if ((booking.therapistName === user?.name || booking.therapistId === user?.id) && 
+        if ((booking.therapistName === user?.name || booking.therapistId === user?.id) &&
             booking.patientId === patientId) {
           return { ...booking, status: 'deleted_by_therapist', cancelledBy: 'therapist', deletedAt: new Date().toISOString() };
         }
         return booking;
       });
       localStorage.setItem('mindcare_bookings', JSON.stringify(updatedBookings));
-      
+
       // Remove patient from local state after updating bookings
       setPatients(prev => prev.filter(p => p.id !== patientId));
-      
-      // Dispatch custom event for real-time updates
-      window.dispatchEvent(new CustomEvent('mindcare-data-updated'));
-      
+
+      // Close modals
+      setShowDeleteConfirm(false);
+      setPatientToDelete(null);
+      if (showPatientModal && selectedPatient?.id === patientId) {
+        setShowPatientModal(false);
+        setSelectedPatient(null);
+      }
+
       toast.success(`${patientName} has been removed from your patient list.`);
     } catch (error) {
       toast.error('Failed to remove patient. Please try again.');
@@ -448,7 +456,7 @@ function PatientsPage() {
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => handleDeletePatient(patient.id)}
+                    onClick={() => handleDeletePatient(patient)}
                     className="p-2 text-gray-500 hover:text-red-600 transition-colors"
                     title="Remove patient from your list"
                   >
@@ -471,6 +479,69 @@ function PatientsPage() {
                 setAnalyticsPatient(null);
               }}
             />
+          )}
+        </AnimatePresence>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {showDeleteConfirm && patientToDelete && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setPatientToDelete(null);
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className={`max-w-md w-full rounded-2xl shadow-2xl p-6 ${
+                  theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <h2 className={`text-xl font-bold ${
+                    theme === 'dark' ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    Remove Patient?
+                  </h2>
+                </div>
+                <p className={`mb-6 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  Are you sure you want to remove <strong>{patientToDelete.name}</strong> from your patient list? This will not delete their account, but will remove them from your patient roster.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setPatientToDelete(null);
+                    }}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      theme === 'dark'
+                        ? 'bg-gray-700 text-white hover:bg-gray-600'
+                        : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                    }`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeletePatient}
+                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -632,8 +703,7 @@ function PatientsPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
-                      handleDeletePatient(selectedPatient.id);
-                      setShowPatientModal(false);
+                      handleDeletePatient(selectedPatient);
                     }}
                     className="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center justify-center space-x-2"
                   >
