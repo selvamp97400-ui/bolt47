@@ -240,13 +240,6 @@ function PatientsPage() {
                 Manage your patient records and treatment progress
               </p>
             </div>
-            <button
-              onClick={() => setShowPatientModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Patient</span>
-            </button>
           </div>
         </motion.div>
 
@@ -445,13 +438,7 @@ function PatientsPage() {
                   >
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button 
-                    className="p-2 text-gray-500 hover:text-green-600 transition-colors"
-                    title="Send message"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                  <button 
+                  <button
                     onClick={() => handleViewAnalytics(patient)}
                     className="p-2 text-gray-500 hover:text-purple-600 transition-colors"
                     title="View patient analytics"
@@ -460,22 +447,7 @@ function PatientsPage() {
                   </button>
                 </div>
                 <div className="flex space-x-2">
-                  <button 
-                    onClick={() => {
-                      const patientReports = progressReports.filter(r => r.patientId === patient.id);
-                      if (patientReports.length > 0) {
-                        const latestReport = patientReports[patientReports.length - 1];
-                        toast.success(`Latest progress: ${latestReport.summary.overallProgress}% complete, ${latestReport.summary.totalCompletedSessions} sessions done`);
-                      } else {
-                        toast.info('No progress reports available for this patient yet');
-                      }
-                    }}
-                    className="p-2 text-gray-500 hover:text-indigo-600 transition-colors"
-                    title="View latest progress report"
-                  >
-                    <TrendingUp className="w-4 h-4" />
-                  </button>
-                  <button 
+                  <button
                     onClick={() => handleDeletePatient(patient.id)}
                     className="p-2 text-gray-500 hover:text-red-600 transition-colors"
                     title="Remove patient from your list"
